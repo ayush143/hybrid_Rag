@@ -1,4 +1,3 @@
-import os
 from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, StorageContext, Settings
 from llama_index.vector_stores.qdrant import QdrantVectorStore
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
@@ -7,21 +6,17 @@ from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams
 from llama_index.core.retrievers import VectorIndexRetriever, QueryFusionRetriever
 from llama_index.retrievers.bm25 import BM25Retriever
-from llama_index.core.postprocessor import SimilarityPostprocessor
 from llama_index.core.query_engine import RetrieverQueryEngine
-
-import nest_asyncio
-
-nest_asyncio.apply()
+from llama_index.core.node_parser import SentenceSplitter
 
 
 # Set your Gemini API key
-os.environ["GOOGLE_API_KEY"] = ""
+from dotenv import load_dotenv
+load_dotenv()
 
-# Embedding model
+
 embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-small-en-v1.5")
 
-# Gemini LLM
 llm = GoogleGenAI(model="gemini-3.5-flash")
 
 # Set global settings
@@ -44,7 +39,7 @@ qdrant_client.create_collection(
     vectors_config=VectorParams(size=embedding_dim, distance=Distance.COSINE)
 )
 
-# Vector store
+
 vector_store = QdrantVectorStore(client=qdrant_client, collection_name=collection_name)
 
 
@@ -53,7 +48,6 @@ documents = reader.load_data()
 print(f"Loaded {len(documents)} documents")
 
 
-from llama_index.core.node_parser import SentenceSplitter
 
 # Parse documents into nodes
 parser = SentenceSplitter(chunk_size=512, chunk_overlap=50)
@@ -63,8 +57,6 @@ nodes = parser.get_nodes_from_documents(documents, show_progress=True)
 storage_context = StorageContext.from_defaults(vector_store=vector_store)
 index = VectorStoreIndex(nodes=nodes, storage_context=storage_context, show_progress=True)
 
-
-from llama_index.core.query_engine import RetrieverQueryEngine
 
 # Dense retriever (vector embeddings - semantic search)
 vector_retriever = VectorIndexRetriever(
